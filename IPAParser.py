@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import sys
+import time
 
 # All base glyphs.
 
@@ -19,7 +20,7 @@ APPROXIMANTS = {'j', 'w', 'ɥ', 'ɰ', 'ɹ', 'ɻ', 'ʋ', 'ʍ'}
 LATERAL_APPROXIMANTS = {'l', 'ɫ', 'ɭ', 'ʎ', 'ʟ'}
 
 MANNERS = [PLOSIVES, IMPLOSIVES, NASALS, TRILLS, TAPS, FRICATIVES, LATERAL_FRICATIVES, APPROXIMANTS, LATERAL_APPROXIMANTS]
-MANNERS_NAMES = ['plosive', 'implosive', 'nasal', 'trill', 'tap', 'fricative', 'lateral fricative', 'appoximant', 'lateral approximant']
+MANNERS_NAMES = ['plosive', 'implosive', 'nasal', 'trill', 'tap', 'fricative', 'lateral_fricative', 'approximant', 'lateral_approximant']
 ALL_CONSONANTS = set.union(*MANNERS)
 
 # Voiced consonants.
@@ -73,6 +74,10 @@ BACK = {'o', 'u', 'ɑ', 'ɒ', 'ɔ', 'ɤ', 'ɯ', 'ʌ', 'o\u031e', 'ɤ\u031e'}
 
 POSITIONS = [FRONT, NEAR_FRONT, CENTRAL, NEAR_BACK, BACK]
 POSITIONS_NAMES = ['front', 'near-front', 'central', 'near-back', 'back']
+
+# Vowels by roundedness.
+
+ROUNDED = {'y', 'ʉ', 'u', 'ʏ', 'ʊ\u0308', 'ʊ', 'ø', 'ɵ', 'o', 'ø\u031e', 'o\u031e', 'œ', 'ɞ', 'ɔ', 'ɶ', 'ɒ'}
 
 # Additional articulations.
 
@@ -180,6 +185,10 @@ def parseVow(phon):
                 attributes.add(OPENNESS_NAMES[i])
         if len(attributes) < 2:
             raise Exception("Vowel attributes under-parsed: " + phon)
+        if phon in ROUNDED:
+            attributes.add('rounded')
+        else:
+            attributes.add('unrounded')
         return attributes
 
 def parsePhon(phon):
@@ -193,7 +202,7 @@ def parsePhon(phon):
         'ʐ̩': 'ʅ',  # Idem.
         'z̩ʷ': 'ʮ', # Idem.
         'ʐ̩ʷ': 'ʯ', # Idem.
-        '(': '',    # For marginal phonemes.
+        '(': '',    # For marginal phonemes. Don't use this unless you really have to.
         ')': ''
     } 
     for key in replaceDict:
@@ -206,14 +215,13 @@ def parsePhon(phon):
             phon = phon.replace('ɰ', 'ɨ')
         elif 'j' in phonoset and phonoset.intersection(ALL_VOWELS):
             phon = phon.replace('j', 'i\u032f')
-    # if printed:
-    #     print(phon)
     pre_attributes  = set()
     core_attributes = set()
     core_glyphs_vow = []
     core_glyphs_con = []
     post_attributes = set()
     j = 0
+    # print(phon)
     for i in range(len(phon)):
         if phon[i] in MAIN_GLYPHS:
             j = i
@@ -227,6 +235,7 @@ def parsePhon(phon):
                 else:
                     raise Exception("Failed to parse a feature %s of phoneme %s" % (str(phon[i].encode("unicode_escape")).strip('b'), phon))
     else:
+        print(phon)
         raise Exception("No core features found")
     i = j
     while i < len(phon):
@@ -265,11 +274,15 @@ def parsePhon(phon):
     # Check for redundant non-syllabicity.
     if 'diphthong' in core_attributes:
         post_attributes.discard('non-syllabic')
-    # Check for lateral affricates.
+    # Check for laterals.
     if 'lateral' in core_attributes and 'affricate' in core_attributes:
-        core_attributes.remove('lateral')
-        core_attributes.remove('affricate')
-        core_attributes.add('lateral affricate')
+        core_attributes.add('lateral_affricate')
+    if 'lateral_fricative' in core_attributes:
+        core_attributes.add('lateral')
+        core_attributes.add('fricative')
+    if 'lateral_approximant' in core_attributes:
+        core_attributes.add('lateral')
+        core_attributes.add('approximant')
     # Check for dental-alveolar conflict.
     if 'dental' in post_attributes:
         post_attributes.remove('dental')
@@ -285,8 +298,19 @@ def parsePhon(phon):
 # Testing code.
 
 def main():
-    phon = 'tŝʼ'
-    print(set.union(*parsePhon(phon)))
+    # test_set = ['ɿ', 'ʅ', 'ʮ', 'ʯ', 'a', 'b', 'c', 'd', 'e', 'f', 'ɡ', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'æ', 'ç', 'ð', 'ø', 'ħ', 'ŋ', 'œ', 'ɐ', 'ɑ', 'ɒ', 'ɓ', 'ɔ', 'ɕ', 'ᶑ', 'ɖ', 'ɗ', 'ɘ', 'ə', 'ɛ', 'ɜ', 'ɞ', 'ɟ', 'ɠ', 'ɢ', 'ɣ', 'ɤ', 'ɥ', 'ɦ', 'ɨ', 'ɪ', 'ɬ', 'ɭ', 'ɮ', 'ɯ', 'ɰ', 'ɱ', 'ɲ', 'ɳ', 'ɴ', 'ɵ', 'ɶ', 'ɸ', 'ɹ', 'ɺ', 'ɻ', 'ɽ', 'ɾ', 'ʀ', 'ʁ', 'ʂ', 'ʃ', 'ʄ', 'ʈ', 'ʉ', 'ʊ', 'ʋ', 'ʌ', 'ʍ', 'ʎ', 'ʏ', 'ʐ', 'ʑ', 'ʒ', 'ʔ', 'ʕ', 'ʙ', 'ʛ', 'ʜ', 'ʝ', 'ʟ', 'ʡ', 'ʢ', 'β', 'θ', 'χ', 'ɚ', 'ɫ', '\u026a\u0308', '\u028a\u0308', '\xe4', '\xf8\u031e', 'e\u031e', '\u0264\u031e', 'o\u031e', 'ƺ', 'ʓ']
+    # i = 10000
+    # print(i * len(test_set), 'parses')
+    # time1 = time.time()
+    # for _ in range(i):
+    #     for phon in test_set:
+    #         parsePhon(phon)
+    # all_time = time.time() - time1
+    # time_per_parse = all_time / (i * len(test_set))
+    # print('All time:', all_time)
+    # print('Time per parse: %.10f' % time_per_parse)
+    phon = ('ɺ')
+    print(parsePhon(phon))
 
 if __name__ == '__main__':
     main()

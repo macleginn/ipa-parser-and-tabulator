@@ -7,7 +7,7 @@ from IPAParser import parsePhon
 
 SERIES_FORMING_FEATURES = {'pre-glottalised', 'pre-aspirated', 'pre-aspirated', 'pre-nasalised', 'pre-labialised', 'pharyngealised', 'nasalised', 'labialised', 'velarised', 'faucalised', 'palatalised', 'half-long', 'long', 'creaky-voiced', 'breathy-voiced', 'lateral-released', 'rhotic', 'advanced-tongue-root', 'retracted-tongue-root'}
 
-CONS_ROW_NAMES = ['plosive', 'implosive', 'nasal', 'trill', 'tap', 'fricative', 'affricate', 'lateral fricative', 'lateral affricate', 'appoximant', 'lateral approximant']
+CONS_ROW_NAMES = ['plosive', 'implosive', 'nasal', 'trill', 'tap', 'fricative', 'affricate', 'lateral_fricative', 'lateral_affricate', 'approximant', 'lateral_approximant']
 CONS_COL_NAMES = ['bilabial', 'labial-velar', 'labial-palatal', 'labiodental', 'dental', 'alveolar', 'postalveolar', 'hissing-hushing', 'retroflex', 'alveolo-palatal', 'palatal', 'velar', 'uvular', 'pharyngeal', 'glottal', 'epiglottal']
 
 VOW_ROW_NAMES = ['close', 'near-close', 'close-mid', 'mid', 'open-mid', 'near-open', 'open']
@@ -33,8 +33,8 @@ class Phoneme:
         return self.phon + "\n" + ", ".join(set.union(set(self.coreSet), set(self.seriesSet)))
 
 def makeTableCons(consList):
-    checkList = set(consList)
     """Transforms a list of consonant Phonemes into a 2-D array for subsequent formatting."""
+    checkList = set(consList)
     pooledFeatures = set()
     for phon in consList:
         pooledFeatures.update(phon.coreSet)
@@ -48,7 +48,14 @@ def makeTableCons(consList):
         for j in range(1, len(table[0])):
             temp = []
             for phon in consList:
-                if rows[i - 1] in phon.coreSet and columns[j - 1] in phon.coreSet:
+                trimmed_set = set(phon.coreSet)
+                if 'lateral_affricate' in trimmed_set:
+                    trimmed_set.discard('affricate')
+                if 'lateral_fricative' in trimmed_set:
+                    trimmed_set.discard('fricative')
+                if 'lateral_approximant' in trimmed_set:
+                    trimmed_set.discard('approximant')
+                if rows[i - 1] in trimmed_set and columns[j - 1] in trimmed_set:
                     checkList.discard(phon)
                     temp.append(str(phon))
             if temp:
@@ -78,7 +85,7 @@ def makeTableVow(vowList):
             if temp:
                 table[i][j] = ", ".join(sorted(temp))
     if checkList:
-        raise Exception("Not all vowels made their way in the table: " + ", ".join(checkList))
+        raise Exception("Not all vowels made their way into the table: " + ", ".join(checkList))
     return table
 
 
